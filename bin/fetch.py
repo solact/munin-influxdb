@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 import pwd
 import json
 import os
@@ -35,7 +35,7 @@ def pack_values(config, values):
     data = defaultdict(dict)
 
     for metric in metrics:
-        (latest_date, latest_value), (previous_date, previous_value) = metrics[metric].values()
+        (latest_date, latest_value), (previous_date, previous_value) = list(metrics[metric].values())
 
         # usually stored as rrd-filename:42 with 42 being a constant column name for RRD files
         if metric.endswith(suffix):
@@ -58,8 +58,8 @@ def pack_values(config, values):
             "measurement": measurement,
             "tags": config['tags'][measurement],
             "time": fields['time'],
-            "fields": {key: value for key, value in fields.iteritems() if key != 'time'}
-        } for measurement, fields in data.iteritems()]
+            "fields": {key: value for key, value in fields.items() if key != 'time'}
+        } for measurement, fields in data.items()]
 
 def read_state_file(filename):
     data = storable.retrieve(filename)

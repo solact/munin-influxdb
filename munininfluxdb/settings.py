@@ -4,7 +4,7 @@ import pprint
 import json
 from os.path import expanduser
 
-from utils import parse_handle
+from .utils import parse_handle
 
 get_field = lambda s, d, h, p, f: s.domains[d].hosts[h].plugins[p].fields[f]
 

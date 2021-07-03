@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import getpass
 import json
@@ -12,10 +12,10 @@ try:
 except (AssertionError, AttributeError) as e:
     raise ImportError("InfluxDB API is too old, please update (e.g: pip install influxdb --upgrade)")
 
-import rrd
-from utils import ProgressBar, parse_handle, Color, Symbol
-from rrd import read_xml_file
-from settings import Settings
+from . import rrd
+from .utils import ProgressBar, parse_handle, Color, Symbol
+from .rrd import read_xml_file
+from .settings import Settings
 
 class InfluxdbClient:
     def __init__(self, settings):
@@ -57,7 +57,7 @@ class InfluxdbClient:
         db_list = self.client.get_list_database()
         if not {'name': name} in db_list:
             if self.settings.interactive:
-                create = raw_input("{0} database doesn't exist. Would you want to create it? [y]/n: ".format(name)) or "y"
+                create = input("{0} database doesn't exist. Would you want to create it? [y]/n: ".format(name)) or "y"
                 if not create in ("y", "Y"):
                     return False
 
@@ -115,7 +115,7 @@ class InfluxdbClient:
         setup = self.settings.influxdb
         print("\n{0}InfluxDB: Please enter your connection information{1}".format(Color.BOLD, Color.CLEAR))
         while not self.client:
-            hostname = raw_input("  - host/handle [{0}]: ".format(setup['host'])) or setup['host']
+            hostname = input("  - host/handle [{0}]: ".format(setup['host'])) or setup['host']
 
             # I miss pointers and explicit references :(
             setup.update(parse_handle(hostname))
@@ -126,8 +126,8 @@ class InfluxdbClient:
             if self.connect(silent=True):
                 break
 
-            setup['port'] = raw_input("  - port [{0}]: ".format(setup['port'])) or setup['port']
-            setup['user'] = raw_input("  - user [{0}]: ".format(setup['user'])) or setup['user']
+            setup['port'] = input("  - port [{0}]: ".format(setup['port'])) or setup['port']
+            setup['user'] = input("  - user [{0}]: ".format(setup['user'])) or setup['user']
             setup['password'] = InfluxdbClient.ask_password()
 
             self.connect()
@@ -138,9 +138,9 @@ class InfluxdbClient:
             else:
                 if self.test_db(setup['database']):
                     break
-            setup['database'] = raw_input("  - database [munin]: ") or "munin"
+            setup['database'] = input("  - database [munin]: ") or "munin"
 
-        group = raw_input("Group multiple fields of the same plugin in the same time series? [y]/n: ") or "y"
+        group = input("Group multiple fields of the same plugin in the same time series? [y]/n: ") or "y"
         setup['group_fields'] = group in ("y", "Y")
 
     def write_series(self, measurement, tags, fields, time_and_values):
@@ -260,7 +260,7 @@ class InfluxdbClient:
                         except Exception as e:
                             errors.append((Symbol.WARN_YELLOW, "Could not read file for {0}: {1}".format(field, e)))
                         else:
-                            [values[key].append(value) for key, value in content.items()]
+                            [values[key].append(value) for key, value in list(content.items())]
 
                             # keep track of influxdb storage info to allow 'fetch'
                             _field.influxdb_measurement = measurement
@@ -271,7 +271,7 @@ class InfluxdbClient:
                     progress_bar.update()
 
                 # join data with time as first column
-                values_with_time.extend([[k]+v for k, v in values.items()])
+                values_with_time.extend([[k]+v for k, v in list(values.items())])
 
                 _upload_and_validate(measurement, tags, field_names, values_with_time)
 
@@ -308,12 +308,12 @@ class InfluxdbClient:
                 _field.influxdb_field = 'value'
 
                 content = read_xml_file(_field.xml_filename)
-                [values[key].append(value) for key, value in content.items()]
+                [values[key].append(value) for key, value in list(content.items())]
                 _field.xml_imported = True
                 progress_bar.update()
 
                 # join data with time as first column
-                values_with_time.extend([[k]+v for k, v in values.items()])
+                values_with_time.extend([[k]+v for k, v in list(values.items())])
                 _upload_and_validate(measurement, tags, field_names, values_with_time)
 
         for error in errors:
@@ -338,7 +338,7 @@ class InfluxdbClient:
                 grouped_files[".".join([series_name, parts[-2]])].append(('value', fullname))
 
         if self.settings.interactive:
-            show = raw_input("Would you like to see the prospective series and columns? y/[n]: ") or "n"
+            show = input("Would you like to see the prospective series and columns? y/[n]: ") or "n"
             if show in ("y", "Y"):
                 for series_name in sorted(grouped_files):
                     print("  - {2}{0}{3}: {1}".format(series_name, [name for name, _ in grouped_files[series_name]], Color.GREEN, Color.CLEAR))
@@ -354,10 +354,10 @@ class InfluxdbClient:
                 keys_name.append(field)
 
                 content = read_xml_file(file)
-                [values[key].append(value) for key, value in content.items()]
+                [values[key].append(value) for key, value in list(content.items())]
 
             # join data with time as first column
-            data.extend([[k]+v for k, v in values.items()])
+            data.extend([[k]+v for k, v in list(values.items())])
 
             try:
                 pass

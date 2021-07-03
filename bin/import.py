@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 
 import argparse
 import sys
@@ -80,7 +80,7 @@ def main(args):
         return
 
     if settings.interactive:
-        settings.grafana['create'] = (raw_input("Would you like to generate a Grafana dashboard? [y]/n: ") or "y") in ('y', 'Y')
+        settings.grafana['create'] = (input("Would you like to generate a Grafana dashboard? [y]/n: ") or "y") in ('y', 'Y')
 
     if settings.grafana['create']:
         dashboard = Dashboard(settings)

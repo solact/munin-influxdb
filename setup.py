@@ -12,7 +12,7 @@ setup(
     license='BSD',
     py_modules=['munininfluxdb'],
     scripts=['muninflux'],
-    install_requires=['influxdb>=2.12.0', 'requests'],
+    install_requires=['influxdb>=2.12.0', 'requests', 'storable', 'crontab'],
     packages=find_packages(),
     classifiers=[
         'Development Status :: 4 - Beta',

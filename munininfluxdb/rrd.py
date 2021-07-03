@@ -1,12 +1,12 @@
-from __future__ import print_function
+
 import os
 import errno
 import subprocess
 import math
 from collections import defaultdict
 import xml.etree.ElementTree as ET
-from settings import Settings, Defaults
-from utils import ProgressBar, Symbol
+from .settings import Settings, Defaults
+from .utils import ProgressBar, Symbol
 
 
 # RRD types
@@ -183,9 +183,9 @@ def discover_from_rrd(settings, insert_missing=True, print_missing=False):
 
     if print_missing and len(not_inserted):
         print("The following plugin databases were ignored")
-        for domain, hosts in not_inserted.items():
+        for domain, hosts in list(not_inserted.items()):
             print("  - Domain {0}:".format(domain))
-            for host, plugins in hosts.items():
+            for host, plugins in list(hosts.items()):
                 print("    {0} Host {1}: {2}".format(Symbol.NOK_RED, host, ", ".join(plugins)))
 
     return settings

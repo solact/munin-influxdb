@@ -6,3 +6,6 @@ munininfluxdb/test*
 local/
 data/
 lib/
+build/
+dist/
+munin_influxdb.egg-info/
