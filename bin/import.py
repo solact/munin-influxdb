@@ -21,6 +21,7 @@ def retrieve_munin_configuration(settings):
         settings = munin.discover_from_datafile(settings)
     except Exception as e:
         print("  {0} Could not process datafile ({1}), will read www and RRD cache instead".format(Symbol.NOK_RED, settings.paths['datafile']))
+        print("    Error: {0}".format(e))
 
         # read /var/cache/munin/www to check what's currently displayed on the dashboard
         settings = munin.discover_from_www(settings)

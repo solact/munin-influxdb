@@ -17,7 +17,7 @@ def discover_from_datafile(settings):
     @return: settings
     """
 
-    with open(settings.paths['datafile']) as f:
+    with open(settings.paths['datafile'], errors='ignore') as f:
         for line_number, line in enumerate(f.readlines()):
             line_number = line_number + 1  # We count lines starting at 1. Not 0
 
