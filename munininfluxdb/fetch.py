@@ -27,6 +27,7 @@ else:
 # Cron job comment is used to uninstall and must not be manually deleted from the crontab
 CRON_COMMENT = 'Update InfluxDB with fresh values from Munin'
 
+
 def pack_values(config, values):
     suffix = ":{0}".format(Defaults.DEFAULT_RRD_INDEX)
     metrics, date = values
@@ -35,7 +36,8 @@ def pack_values(config, values):
     data = defaultdict(dict)
 
     for metric in metrics:
-        (latest_date, latest_value), (previous_date, previous_value) = list(metrics[metric].values())
+        (latest_date, latest_value) = metrics[metric]['current']
+        (previous_date, previous_value) = metrics[metric]['previous']
 
         # usually stored as rrd-filename:42 with 42 being a constant column name for RRD files
         if metric.endswith(suffix):
@@ -44,27 +46,46 @@ def pack_values(config, values):
             name = metric
 
         if name in config['metrics']:
-            measurement, field = config['metrics'][name]
+            domain, host, measurement, field = config['metrics'][name]
+            rrdtype = name[-5:-4]
 
+            data[measurement]['tags'] = {
+                'domain': domain, 'host': host, 'plugin': measurement}
             data[measurement]['time'] = int(latest_date)
-            data[measurement][field] = float(latest_value) if latest_value != 'U' else None   # 'U' is Munin value for unknown
+            if latest_value == 'U':
+                # 'U' is Munin value for unknown
+                data[measurement][field] = None
+            else:
+                # 'a': 'ABSOLUTE'
+                # 'c': 'COUNTER'
+                # 'd': 'DERIVE'
+                # 'g': 'GAUGE'
+                if rrdtype == 'a' or rrdtype == 'g':
+                    data[measurement][field] = float(latest_value)
+                elif rrdtype == 'c' or rrdtype == 'd':
+                    data[measurement][field] = \
+                        (float(latest_value) - float(previous_value)) / \
+                        (latest_date - previous_date)
         else:
-            age = (date - int(latest_date)) // (24*3600)
+            age = (date - int(latest_date or '0')) // (24*3600)
             if age < 7:
-                print("{0} Not found measurement {1} (updated {2} days ago)".format(Symbol.WARN_YELLOW, name, age))
+                print("{0} Not found measurement {1} (updated {2} days ago)".format(
+                    Symbol.WARN_YELLOW, name, age))
             # otherwise very probably a removed plugin, no problem
 
     return [{
             "measurement": measurement,
-            "tags": config['tags'][measurement],
+            "tags": fields['tags'],
             "time": fields['time'],
-            "fields": {key: value for key, value in fields.items() if key != 'time'}
-        } for measurement, fields in data.items()]
+            "fields": {key: value for key, value in fields.items() if key != 'time' and key != 'tags'}
+            } for measurement, fields in data.items()]
+
 
 def read_state_file(filename):
     data = storable.retrieve(filename)
     assert 'spoolfetch' in data and 'value' in data
     return data['value'], data['spoolfetch']
+
 
 def main(config_filename=Defaults.FETCH_CONFIG):
     config = None
@@ -81,7 +102,8 @@ def main(config_filename=Defaults.FETCH_CONFIG):
     try:
         client.get_list_database()
     except influxdb.client.InfluxDBClientError as e:
-        print("  {0} Could not connect to database: {1}".format(Symbol.WARN_YELLOW, e))
+        print("  {0} Could not connect to database: {1}".format(
+            Symbol.WARN_YELLOW, e))
         sys.exit(1)
     else:
         client.switch_database(config['influxdb']['database'])
@@ -91,7 +113,8 @@ def main(config_filename=Defaults.FETCH_CONFIG):
             values = read_state_file(statefile)
 
         except Exception as e:
-            print("{0} Could not read state file {1}: {2}".format(Symbol.NOK_RED, statefile, e))
+            print("{0} Could not read state file {1}: {2}".format(
+                Symbol.NOK_RED, statefile, e))
             continue
         else:
             print("{0} Parsed: {1}".format(Symbol.OK_GREEN, statefile))
@@ -102,20 +125,25 @@ def main(config_filename=Defaults.FETCH_CONFIG):
             try:
                 client.write_points(data, time_precision='s')
             except influxdb.client.InfluxDBClientError as e:
-                print("  {0} Could not write data to database: {1}".format(Symbol.WARN_YELLOW, e))
+                print("  {0} Could not write data to database: {1}".format(
+                    Symbol.WARN_YELLOW, e))
             else:
-                config['lastupdate'] = max(config['lastupdate'], int(values[1]))
-                print("{0} Successfully written {1} new measurements".format(Symbol.OK_GREEN, len(data)))
+                config['lastupdate'] = max(
+                    config['lastupdate'] or 0, int(values[1]))
+                print("{0} Successfully written {1} new measurements".format(
+                    Symbol.OK_GREEN, len(data)))
         else:
-            print("%s No data found, is Munin still running?", Symbol.NOK_RED)
+            print("%s No data found, is Munin still running?" % Symbol.NOK_RED)
 
     with open(config_filename, "w") as f:
         json.dump(config, f)
         print("{0} Updated configuration: {1}".format(Symbol.OK_GREEN, f.name))
 
+
 def uninstall_cron():
     if os.geteuid() != 0:
-        print("It seems you are not root, please run \"muninflux fetch --uninstall-cron\" again with root privileges".format(sys.argv[0]))
+        print(
+            "It seems you are not root, please run \"muninflux fetch --uninstall-cron\" again with root privileges".format(sys.argv[0]))
         sys.exit(1)
 
     try:
@@ -130,9 +158,11 @@ def uninstall_cron():
 
     return len(jobs)
 
+
 def install_cron(script_file, period):
     if os.geteuid() != 0:
-        print("It seems you are not root, please run \"muninflux fetch --install-cron\" again with root privileges".format(sys.argv[0]))
+        print(
+            "It seems you are not root, please run \"muninflux fetch --install-cron\" again with root privileges".format(sys.argv[0]))
         sys.exit(1)
 
     try:
@@ -149,6 +179,7 @@ def install_cron(script_file, period):
 
     return job.is_valid() and job.is_enabled()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""
     'fetch' command grabs fresh data gathered by a still running Munin installation and send it to InfluxDB.
@@ -159,20 +190,22 @@ if __name__ == "__main__":
                         help='overrides the default configuration file (default: %(default)s)')
     cronargs = parser.add_argument_group('cron job management')
     cronargs.add_argument('--install-cron', dest='script_path',
-                        help='install a cron job to updated InfluxDB with fresh data from Munin every <period> minutes')
+                          help='install a cron job to updated InfluxDB with fresh data from Munin every <period> minutes')
     cronargs.add_argument('-p', '--period', default=5, type=int,
-                        help="sets the period in minutes between each fetch in the cron job (default: %(default)min)")
+                          help="sets the period in minutes between each fetch in the cron job (default: %(default)min)")
     cronargs.add_argument('--uninstall-cron', action='store_true',
-                        help='uninstall the fetch cron job (any matching the initial comment actually)')
+                          help='uninstall the fetch cron job (any matching the initial comment actually)')
     args = parser.parse_args()
 
     if args.script_path:
         install_cron(args.script_path, args.period)
-        print("{0} Cron job installed for user {1}".format(Symbol.OK_GREEN, CRON_USER))
+        print("{0} Cron job installed for user {1}".format(
+            Symbol.OK_GREEN, CRON_USER))
     elif args.uninstall_cron:
         nb = uninstall_cron()
         if nb:
-            print("{0} Cron job uninstalled for user {1} ({2} entries deleted)".format(Symbol.OK_GREEN, CRON_USER, nb))
+            print("{0} Cron job uninstalled for user {1} ({2} entries deleted)".format(
+                Symbol.OK_GREEN, CRON_USER, nb))
         else:
             print("No matching job found (searching comment \"{1}\" in crontab for user {2})".format(Symbol.WARN_YELLOW,
                                                                                                      CRON_COMMENT, CRON_USER))

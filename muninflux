@@ -10,18 +10,18 @@ function usage() {
 }
 
 function launch_install_cron() {
-    python bin/fetch.py --install-cron $(dirname $(readlink -f "$0"))/bin/fetch.py
+    python -m munininfluxdb.fetch --install-cron "python -m munininfluxdb.fetch"
 }
 
 if [[ $1 == "import" ]]; then
     shift
-    python bin/import.py $@ && launch_install_cron
+    sudo su - munin bash -c "python -m munininfluxdb.import $@" && launch_install_cron
 elif [[ $1 == "fetch" ]]; then
     if [[ $2 == "--install-cron" ]]; then
         launch_install_cron
     else
         shift
-        python bin/fetch.py $@
+        sudo su - munin bash -c "python -m munininfluxdb.fetch $@"
     fi
 elif [[ $1 == "help" ]]; then
     usage

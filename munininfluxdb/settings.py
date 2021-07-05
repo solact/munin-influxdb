@@ -6,13 +6,15 @@ from os.path import expanduser
 
 from .utils import parse_handle
 
-get_field = lambda s, d, h, p, f: s.domains[d].hosts[h].plugins[p].fields[f]
+
+def get_field(s, d, h, p, f): return s.domains[d].hosts[h].plugins[p].fields[f]
+
 
 class Field:
 
     def __init__(self):
         self.settings = defaultdict(dict)
-        #default values
+        # default values
         self.settings['type'] = "GAUGE"
 
         # RRD file
@@ -41,6 +43,7 @@ class Plugin:
     def __repr__(self):
         return pprint.pformat(dict(self.fields))
 
+
 class Host:
     def __init__(self):
         self.plugins = defaultdict(Plugin)
@@ -58,6 +61,7 @@ class Domain:
     def __repr__(self):
         return pprint.pformat(dict(self.hosts))
 
+
 class Defaults:
     MUNIN_RRD_FOLDER = "/var/lib/munin"
     MUNIN_VAR_FOLDER = "/var/lib/munin"
@@ -69,6 +73,7 @@ class Defaults:
     MUNIN_XML_FOLDER = TEMP_FOLDER+"/xml"
 
     DEFAULT_RRD_INDEX = 42
+
 
 class Settings:
     def __init__(self, cli_args=None):
@@ -119,7 +124,6 @@ class Settings:
                 "show_minmax": True,
             }
 
-
         self.nb_plugins = 0
         self.nb_fields = 0
         self.nb_rrd_files = 0
@@ -130,21 +134,18 @@ class Settings:
             "statefiles": [os.path.join(self.paths['munin'], "state-{0}-{1}.storable".format(domain, host))
                            for domain in self.domains
                            for host in self.domains[domain].hosts
-            ],
+                           ],
             # {rrd_filename: (series, column), ...}
             "metrics": {get_field(self, d, h, p, field).rrd_filename:
-                                (get_field(self, d, h, p, field).influxdb_measurement,
-                                 get_field(self, d, h, p, field).influxdb_field)
-                       for d, h, p, field in self.iter_fields()
-                       if get_field(self, d, h, p, field).xml_imported
-            },
-            "tags": {get_field(self, d, h, p, field).influxdb_measurement: {"domain": d, "host": h,"plugin": p}
-                       for d, h, p, field in self.iter_fields()
-                       if get_field(self, d, h, p, field).xml_imported
-            },
+                        (d, h, get_field(self, d, h, p, field).influxdb_measurement,
+                         get_field(self, d, h, p, field).influxdb_field)
+                        for d, h, p, field in self.iter_fields()
+                        if get_field(self, d, h, p, field).xml_imported
+                        },
             "lastupdate": None
         }
 
+        os.makedirs(expanduser("~")+"/.config", exist_ok=True)
         with open(self.paths['fetch_config'], 'w') as f:
             json.dump(config, f, indent=2, separators=(',', ': '))
 
@@ -156,7 +157,6 @@ class Settings:
             for host in self.domains[domain].hosts:
                 for plugin in self.domains[domain].hosts[host].plugins:
                     yield domain, host, plugin
-
 
     def iter_fields(self):
         """
