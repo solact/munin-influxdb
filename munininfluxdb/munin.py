@@ -1,4 +1,3 @@
-
 import os
 import sys
 import pprint
@@ -7,6 +6,7 @@ from .utils import ProgressBar, Symbol
 from .settings import Settings
 
 import storable
+
 
 def discover_from_datafile(settings):
     """
@@ -58,19 +58,22 @@ def discover_from_datafile(settings):
         settings.nb_fields += 1
 
         type_suffix = _field.settings["type"].lower()[0]
-        _field.rrd_filename = os.path.join(settings.paths['munin'], domain, "{0}-{1}-{2}-{3}.rrd".format(host, plugin.replace(".", "-"), field, type_suffix))
-        _field.xml_filename = os.path.join(settings.paths['xml'], "{0}-{1}-{2}-{3}-{4}.xml".format(domain, host, plugin.replace(".", "-"), field, type_suffix))
+        _field.rrd_filename = os.path.join(
+            settings.paths['munin'], domain, "{0}-{1}-{2}-{3}.rrd".format(host, plugin.replace(".", "-"), field, type_suffix))
+        _field.xml_filename = os.path.join(settings.paths['xml'], "{0}-{1}-{2}-{3}-{4}.xml".format(
+            domain, host, plugin.replace(".", "-"), field, type_suffix))
 
         # remove multigraph intermediates
         if '.' in plugin:
             mg_plugin, mg_field = plugin.split(".")
             if mg_plugin in settings.domains[domain].hosts[host].plugins \
-                and mg_field in settings.domains[domain].hosts[host].plugins[mg_plugin].fields:
+                    and mg_field in settings.domains[domain].hosts[host].plugins[mg_plugin].fields:
 
                 del settings.domains[domain].hosts[host].plugins[mg_plugin].fields[mg_field]
                 settings.nb_fields -= 1
 
     return settings
+
 
 def discover_from_www(settings):
     """
@@ -110,8 +113,8 @@ def discover_from_www(settings):
 
             elements = link.get("href").split("/")
             if len(elements) < 2 \
-                or elements[0].startswith("..") \
-                or elements[-1].startswith("index"):
+                    or elements[0].startswith("..") \
+                    or elements[-1].startswith("index"):
                 continue
 
             if len(elements) == 2:
@@ -125,7 +128,8 @@ def discover_from_www(settings):
                 continue
 
             plugin = plugin.replace(".html", "")
-            settings.domains[domain.text].hosts[host].plugins[plugin].is_multigraph = (len(elements) == 3)
+            settings.domains[domain.text].hosts[host].plugins[plugin].is_multigraph = (
+                len(elements) == 3)
             settings.domains[domain.text].hosts[host].plugins[plugin].settings = {
                 'graph_title': link.text,
             }
@@ -133,18 +137,22 @@ def discover_from_www(settings):
 
     return settings
 
+
 def read_state_file(filename):
     assert filename.startswith("state") and filename.endswith("storable")
 
     try:
         data = storable.retrieve(filename)
     except Exception as e:
-        print("{0} Error: could read state file {1}: {2}".format(Symbol.NOK_RED, filename, e))
+        print("{0} Error: could read state file {1}: {2}".format(
+            Symbol.NOK_RED, filename, e))
 
 
 if __name__ == "__main__":
     # main() for dev/debug only
     settings = discover_from_datafile("../data/datafile")
     # acadis.org;tesla:if_eth0.up.info
-    pprint.pprint( dict(settings.domains["acadis.org"].hosts["house"].plugins["youtube_views_scilabus"].settings) )
-    pprint.pprint( dict(settings.domains["acadis.org"].hosts["tesla"].plugins["if_eth0"].fields["up"].settings) )
+    pprint.pprint(dict(
+        settings.domains["acadis.org"].hosts["house"].plugins["youtube_views_scilabus"].settings))
+    pprint.pprint(dict(
+        settings.domains["acadis.org"].hosts["tesla"].plugins["if_eth0"].fields["up"].settings))

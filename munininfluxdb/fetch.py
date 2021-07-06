@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import pwd
 import json
 import os
@@ -12,10 +10,7 @@ from munininfluxdb.settings import Defaults
 
 import influxdb
 
-try:
-    import storable
-except ImportError:
-    from vendor import storable
+import storable
 
 try:
     pwd.getpwnam('munin')

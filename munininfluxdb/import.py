@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 import argparse
 import sys
 
@@ -20,7 +17,8 @@ def retrieve_munin_configuration(settings):
     try:
         settings = munin.discover_from_datafile(settings)
     except Exception as e:
-        print("  {0} Could not process datafile ({1}), will read www and RRD cache instead".format(Symbol.NOK_RED, settings.paths['datafile']))
+        print("  {0} Could not process datafile ({1}), will read www and RRD cache instead".format(
+            Symbol.NOK_RED, settings.paths['datafile']))
         print("    Error: {0}".format(e))
 
         # read /var/cache/munin/www to check what's currently displayed on the dashboard
@@ -36,13 +34,15 @@ def retrieve_munin_configuration(settings):
     except Exception as e:
         print("  {0} {1}".format(Symbol.NOK_RED, e))
     else:
-        print("  {0} Found {1} RRD files".format(Symbol.OK_GREEN, settings.nb_rrd_files))
+        print("  {0} Found {1} RRD files".format(
+            Symbol.OK_GREEN, settings.nb_rrd_files))
 
     return settings
 
 
 def main(args):
-    print("{0}Munin to InfluxDB migration tool{1}".format(Color.BOLD, Color.CLEAR))
+    print("{0}Munin to InfluxDB migration tool{1}".format(
+        Color.BOLD, Color.CLEAR))
     print("-" * 20)
 
     settings = Settings(args)
@@ -51,18 +51,21 @@ def main(args):
     # export RRD files as XML for (much) easier parsing (but takes much more time)
     print("\nExporting RRD databases:".format(settings.nb_rrd_files))
     nb_xml = rrd.export_to_xml(settings)
-    print("  {0} Exported {1} RRD files to XML ({2})".format(Symbol.OK_GREEN, nb_xml, settings.paths['xml']))
+    print("  {0} Exported {1} RRD files to XML ({2})".format(
+        Symbol.OK_GREEN, nb_xml, settings.paths['xml']))
 
-    #reads every XML file and export as in the InfluxDB database
+    # reads every XML file and export as in the InfluxDB database
     exporter = InfluxdbClient(settings)
     if settings.interactive:
         exporter.prompt_setup()
     else:
         # even in non-interactive mode, we ask for the password if empty
         if not exporter.settings.influxdb['password']:
-            exporter.settings.influxdb['password'] = InfluxdbClient.ask_password()
+            exporter.settings.influxdb['password'] = InfluxdbClient.ask_password(
+            )
         exporter.connect()
-        exporter.test_db(exporter.settings.influxdb['database'])    # needed to create db if missing
+        # needed to create db if missing
+        exporter.test_db(exporter.settings.influxdb['database'])
 
     exporter.import_from_xml()
 
@@ -81,7 +84,8 @@ def main(args):
         return
 
     if settings.interactive:
-        settings.grafana['create'] = (input("Would you like to generate a Grafana dashboard? [y]/n: ") or "y") in ('y', 'Y')
+        settings.grafana['create'] = (input(
+            "Would you like to generate a Grafana dashboard? [y]/n: ") or "y") in ('y', 'Y')
 
     if settings.grafana['create']:
         dashboard = Dashboard(settings)
@@ -94,17 +98,21 @@ def main(args):
             try:
                 dash_url = dashboard.upload()
             except Exception as e:
-                print("{0} Didn't quite work uploading: {1}".format(Symbol.NOK_RED, e))
+                print("{0} Didn't quite work uploading: {1}".format(
+                    Symbol.NOK_RED, e))
             else:
-                print("{0} A Grafana dashboard has been successfully uploaded to {1}".format(Symbol.OK_GREEN, dash_url))
+                print("{0} A Grafana dashboard has been successfully uploaded to {1}".format(
+                    Symbol.OK_GREEN, dash_url))
 
         if settings.grafana['filename']:
             try:
                 dashboard.save()
             except Exception as e:
-                print("{0} Could not write Grafana dashboard: {1}".format(Symbol.NOK_RED, e))
+                print("{0} Could not write Grafana dashboard: {1}".format(
+                    Symbol.NOK_RED, e))
             else:
-                print("{0} A Grafana dashboard has been successfully generated to {1}".format(Symbol.OK_GREEN, settings.grafana['filename']))
+                print("{0} A Grafana dashboard has been successfully generated to {1}".format(
+                    Symbol.OK_GREEN, settings.grafana['filename']))
     else:
         print("Then we're good! Have a nice day!")
 
@@ -122,8 +130,10 @@ if __name__ == "__main__":
     period). This updates the InfluxDB series with fresh data from Munin.
     See 'fetch -h' for details.
     """)
-    parser.add_argument('--interactive', dest='interactive', action='store_true')
-    parser.add_argument('--no-interactive', dest='interactive', action='store_false')
+    parser.add_argument('--interactive', dest='interactive',
+                        action='store_true')
+    parser.add_argument('--no-interactive',
+                        dest='interactive', action='store_false')
     parser.set_defaults(interactive=True)
     parser.add_argument('--xml-temp-path', default=Defaults.MUNIN_XML_FOLDER,
                         help='set path where to store result of RRD exported files (default: %(default)s)')
@@ -137,7 +147,7 @@ if __name__ == "__main__":
     # InfluxDB
     idbargs = parser.add_argument_group('InfluxDB parameters')
     idbargs.add_argument('-c', '--influxdb', default="root@localhost:8086/db/munin",
-                        help='connection handle to InfluxDB server, format [user[:password]]@host[:port][/db/dbname] (default: %(default)s)')
+                         help='connection handle to InfluxDB server, format [user[:password]]@host[:port][/db/dbname] (default: %(default)s)')
     parser.add_argument('--group-fields', dest='group_fields', action='store_true',
                         help='group all fields of a plugin in the same InfluxDB time series (default)')
     parser.add_argument('--no-group-fields', dest='group_fields', action='store_false',
@@ -160,14 +170,19 @@ if __name__ == "__main__":
     grafanargs.add_argument('--no-grafana', dest='grafana', action='store_false',
                             help='disable Grafana dashboard generation')
     grafanargs.set_defaults(grafana=True)
-    grafanargs.add_argument('--grafana-minmax', dest='show_minmax', action='store_true', help='display min/max/current in legend (default)')
-    grafanargs.add_argument('--grafana-no-minmax', dest='show_minmax', action='store_false', help='no values in legend')
+    grafanargs.add_argument('--grafana-minmax', dest='show_minmax',
+                            action='store_true', help='display min/max/current in legend (default)')
+    grafanargs.add_argument('--grafana-no-minmax', dest='show_minmax',
+                            action='store_false', help='no values in legend')
     grafanargs.set_defaults(show_minmax=True)
-    grafanargs.add_argument('--grafana-title', default="Munin Dashboard", help='dashboard title')
+    grafanargs.add_argument(
+        '--grafana-title', default="Munin Dashboard", help='dashboard title')
     grafanargs.add_argument('--grafana-file', default="/tmp/munin-influxdb/munin-grafana.json",
                             help='path to output json file, will have to be imported manually to Grafana')
-    grafanargs.add_argument('--grafana-cols', default=2, type=int, help='number of panel per row')
-    grafanargs.add_argument('--grafana-tags', nargs='+', help='grafana dashboard tags')
+    grafanargs.add_argument('--grafana-cols', default=2,
+                            type=int, help='number of panel per row')
+    grafanargs.add_argument('--grafana-tags', nargs='+',
+                            help='grafana dashboard tags')
 
     args = parser.parse_args()
 

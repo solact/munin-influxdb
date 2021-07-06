@@ -1,4 +1,3 @@
-
 import os
 import errno
 import subprocess
@@ -28,7 +27,8 @@ def read_xml_file(filename, keep_average_only=True, keep_null_values=True):
     step = int(root.find('step').text)
 
     if len(root.findall('ds')) > 1:
-        print("  {0} Found more than one datasource in {1} which is not expected. Please report problem.".format(Symbol.NOK_RED, filename))
+        print("  {0} Found more than one datasource in {1} which is not expected. Please report problem.".format(
+            Symbol.NOK_RED, filename))
 
     for rra in root.findall('rra'):
         if keep_average_only and rra.find('cf').text.strip() != "AVERAGE":
@@ -79,11 +79,13 @@ def export_to_xml(settings):
         if _field.rrd_found:
             progress_bar.update()
 
-            code = subprocess.check_call(['rrdtool', 'dump', _field.rrd_filename, _field.xml_filename])
+            code = subprocess.check_call(
+                ['rrdtool', 'dump', _field.rrd_filename, _field.xml_filename])
             if code == 0:
                 _field.rrd_exported = True
 
     return progress_bar.current
+
 
 def export_to_xml_in_folder(source, destination=Defaults.MUNIN_XML_FOLDER):
     """
@@ -97,7 +99,8 @@ def export_to_xml_in_folder(source, destination=Defaults.MUNIN_XML_FOLDER):
         if e.errno != errno.EEXIST:
             raise
 
-    filelist = [("", os.path.join(source, file)) for file in os.listdir(source) if file.endswith(".rrd")]
+    filelist = [("", os.path.join(source, file))
+                for file in os.listdir(source) if file.endswith(".rrd")]
     nb_files = len(filelist)
     progress_bar = ProgressBar(nb_files)
 
@@ -105,7 +108,8 @@ def export_to_xml_in_folder(source, destination=Defaults.MUNIN_XML_FOLDER):
 
     for domain, file in filelist:
         src = os.path.join(source, domain, file)
-        dst = os.path.join(destination, "{0}-{1}".format(domain, file).replace(".rrd", ".xml"))
+        dst = os.path.join(
+            destination, "{0}-{1}".format(domain, file).replace(".rrd", ".xml"))
         progress_bar.update()
 
         code = subprocess.check_call(['rrdtool', 'dump', src, dst])
@@ -134,11 +138,11 @@ def discover_from_rrd(settings, insert_missing=True, print_missing=False):
 
     for domain in os.listdir(folder):
         if not os.path.isdir(os.path.join(folder, domain)):
-            #domains are represented as folders
+            # domains are represented as folders
             continue
 
         if not insert_missing and not domain in settings.domains:
-            #skip unknown domains (probably no longer wanted)
+            # skip unknown domains (probably no longer wanted)
             continue
 
         files = os.listdir(os.path.join(folder, domain))
@@ -158,7 +162,8 @@ def discover_from_rrd(settings, insert_missing=True, print_missing=False):
                 print("Error:", filename, parts, length)
                 continue
 
-            host, plugin, field, datatype = parts[0], ".".join(parts[1:-2]), parts[-2], parts[-1]
+            host, plugin, field, datatype = parts[0], ".".join(
+                parts[1:-2]), parts[-2], parts[-1]
 
             if not insert_missing and (not host in settings.domains[domain].hosts or not plugin in settings.domains[domain].hosts[host].plugins):
                 if not host in not_inserted[domain]:
@@ -168,14 +173,18 @@ def discover_from_rrd(settings, insert_missing=True, print_missing=False):
 
             plugin_data = settings.domains[domain].hosts[host].plugins[plugin]
             try:
-                assert os.path.exists(os.path.join(folder, domain, "{0}-{1}-{2}-{3}.rrd".format(host, plugin.replace(".", "-"), field, datatype[0])))
+                assert os.path.exists(os.path.join(
+                    folder, domain, "{0}-{1}-{2}-{3}.rrd".format(host, plugin.replace(".", "-"), field, datatype[0])))
             except AssertionError:
-                print("{0} != {1}-{2}-{3}-{4}.rrd".format(filename, host, plugin, field, datatype[0]))
+                print("{0} != {1}-{2}-{3}-{4}.rrd".format(filename,
+                      host, plugin, field, datatype[0]))
                 plugin_data.fields[field].rrd_found = False
             else:
                 plugin_data.fields[field].rrd_found = True
-                plugin_data.fields[field].rrd_filename = os.path.join(settings.paths['munin'], domain, filename)
-                plugin_data.fields[field].xml_filename = os.path.join(settings.paths['xml'], domain, filename.replace(".rrd", ".xml"))
+                plugin_data.fields[field].rrd_filename = os.path.join(
+                    settings.paths['munin'], domain, filename)
+                plugin_data.fields[field].xml_filename = os.path.join(
+                    settings.paths['xml'], domain, filename.replace(".rrd", ".xml"))
                 plugin_data.fields[field].settings = {
                     "type": DATA_TYPES[datatype]
                 }
@@ -186,7 +195,8 @@ def discover_from_rrd(settings, insert_missing=True, print_missing=False):
         for domain, hosts in list(not_inserted.items()):
             print("  - Domain {0}:".format(domain))
             for host, plugins in list(hosts.items()):
-                print("    {0} Host {1}: {2}".format(Symbol.NOK_RED, host, ", ".join(plugins)))
+                print("    {0} Host {1}: {2}".format(
+                    Symbol.NOK_RED, host, ", ".join(plugins)))
 
     return settings
 
@@ -206,5 +216,5 @@ def check_rrd_files(settings, folder=Defaults.MUNIN_RRD_FOLDER):
             settings.nb_rrd_files += 1
 
     if len(missing):
-        raise Exception("Not found in {0}:\n    - {1}".format(folder, "\n    - ".join(missing)))
-
+        raise Exception(
+            "Not found in {0}:\n    - {1}".format(folder, "\n    - ".join(missing)))

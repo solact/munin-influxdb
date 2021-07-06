@@ -1,4 +1,3 @@
-
 from pprint import pprint
 
 try:
@@ -6,9 +5,11 @@ try:
 except ImportError:
     print("SSH library Paramiko missing, needed for remote plugins")
 
+
 class MuninRunner:
     def __init__(self):
         pass
+
 
 class HostRunner:
     def __init__(self):
@@ -60,6 +61,7 @@ def main():
     content[current_group_name] = current_group
 
     pprint(content)
+
 
 if __name__ == "__main__":
     main()

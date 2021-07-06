@@ -1,4 +1,3 @@
-
 import os
 import getpass
 import json
@@ -10,12 +9,14 @@ try:
     # poor man's check
     assert influxdb.__version__[0] not in ('0', '1')
 except (AssertionError, AttributeError) as e:
-    raise ImportError("InfluxDB API is too old, please update (e.g: pip install influxdb --upgrade)")
+    raise ImportError(
+        "InfluxDB API is too old, please update (e.g: pip install influxdb --upgrade)")
 
 from . import rrd
 from .utils import ProgressBar, parse_handle, Color, Symbol
 from .rrd import read_xml_file
 from .settings import Settings
+
 
 class InfluxdbClient:
     def __init__(self, settings):
@@ -37,7 +38,8 @@ class InfluxdbClient:
         except influxdb.client.InfluxDBClientError as e:
             self.client, self.valid = None, False
             if not silent:
-                print("  {0} Could not connect to database: {1}".format(Symbol.WARN_YELLOW, e))
+                print("  {0} Could not connect to database: {1}".format(
+                    Symbol.WARN_YELLOW, e))
         except Exception as e:
             print("Error: %s" % e)
             self.client, self.valid = None, False
@@ -57,7 +59,8 @@ class InfluxdbClient:
         db_list = self.client.get_list_database()
         if not {'name': name} in db_list:
             if self.settings.interactive:
-                create = input("{0} database doesn't exist. Would you want to create it? [y]/n: ".format(name)) or "y"
+                create = input(
+                    "{0} database doesn't exist. Would you want to create it? [y]/n: ".format(name)) or "y"
                 if not create in ("y", "Y"):
                     return False
 
@@ -113,9 +116,11 @@ class InfluxdbClient:
 
     def prompt_setup(self):
         setup = self.settings.influxdb
-        print("\n{0}InfluxDB: Please enter your connection information{1}".format(Color.BOLD, Color.CLEAR))
+        print("\n{0}InfluxDB: Please enter your connection information{1}".format(
+            Color.BOLD, Color.CLEAR))
         while not self.client:
-            hostname = input("  - host/handle [{0}]: ".format(setup['host'])) or setup['host']
+            hostname = input(
+                "  - host/handle [{0}]: ".format(setup['host'])) or setup['host']
 
             # I miss pointers and explicit references :(
             setup.update(parse_handle(hostname))
@@ -126,8 +131,10 @@ class InfluxdbClient:
             if self.connect(silent=True):
                 break
 
-            setup['port'] = input("  - port [{0}]: ".format(setup['port'])) or setup['port']
-            setup['user'] = input("  - user [{0}]: ".format(setup['user'])) or setup['user']
+            setup['port'] = input(
+                "  - port [{0}]: ".format(setup['port'])) or setup['port']
+            setup['user'] = input(
+                "  - user [{0}]: ".format(setup['user'])) or setup['user']
             setup['password'] = InfluxdbClient.ask_password()
 
             self.connect()
@@ -140,17 +147,20 @@ class InfluxdbClient:
                     break
             setup['database'] = input("  - database [munin]: ") or "munin"
 
-        group = input("Group multiple fields of the same plugin in the same time series? [y]/n: ") or "y"
+        group = input(
+            "Group multiple fields of the same plugin in the same time series? [y]/n: ") or "y"
         setup['group_fields'] = group in ("y", "Y")
 
     def write_series(self, measurement, tags, fields, time_and_values):
         if len(fields) != len(time_and_values[0]):
-            raise Exception("Cannot insert in {0} series: expected {1} columns (contains {2})".format(measurement, len(fields), len(time_and_values[0])))
+            raise Exception("Cannot insert in {0} series: expected {1} columns (contains {2})".format(
+                measurement, len(fields), len(time_and_values[0])))
 
         body = []
         for row in time_and_values:
             # InfluxDB does not accept null values (nor field-less entries)
-            valid_fields = {field: val for field, val in zip(fields[1:], row[1:]) if val is not None}
+            valid_fields = {field: val for field, val in zip(
+                fields[1:], row[1:]) if val is not None}
             if valid_fields:
                 body.append({
                     "measurement": measurement,
@@ -163,9 +173,11 @@ class InfluxdbClient:
             try:
                 self.client.write_points(body, time_precision='s')
             except influxdb.client.InfluxDBClientError as e:
-                raise Exception("Cannot insert in {0} series: {1}".format(measurement, e))
+                raise Exception(
+                    "Cannot insert in {0} series: {1}".format(measurement, e))
         else:
-            raise ValueError("Measurement {0} did not contain any non-null value".format(measurement))
+            raise ValueError(
+                "Measurement {0} did not contain any non-null value".format(measurement))
 
     def validate_record(self, name, fields):
         """
@@ -183,25 +195,29 @@ class InfluxdbClient:
                 pass
             else:
                 try:
-                    res = self.client.query("SELECT COUNT(\"{0}\") FROM \"{1}\"".format(field, name))
+                    res = self.client.query(
+                        "SELECT COUNT(\"{0}\") FROM \"{1}\"".format(field, name))
                     assert len(res) >= 0
                 except influxdb.client.InfluxDBClientError as e:
                     raise Exception(str(e))
                 except Exception as e:
-                    raise Exception("Field \"{}\" in measurement {} doesn't exist. (May happen if original data contains only NaN entries)".format(field, name))
+                    raise Exception(
+                        "Field \"{}\" in measurement {} doesn't exist. (May happen if original data contains only NaN entries)".format(field, name))
 
         return True
 
     def import_from_xml(self):
         print("\nUploading data to InfluxDB:")
-        progress_bar = ProgressBar(self.settings.nb_rrd_files*3)  # nb_files * (read + upload + validate)
+        # nb_files * (read + upload + validate)
+        progress_bar = ProgressBar(self.settings.nb_rrd_files*3)
         errors = []
 
         def _upload_and_validate(measurement, tags, fields, packed_values):
             try:
                 self.write_series(measurement, tags, fields, packed_values)
             except Exception as e:
-                errors.append((Symbol.NOK_RED, "Error writing {0} to InfluxDB: {1}".format(measurement, e)))
+                errors.append(
+                    (Symbol.NOK_RED, "Error writing {0} to InfluxDB: {1}".format(measurement, e)))
                 return
             finally:
                 progress_bar.update(len(fields)-1)  # 'time' column ignored
@@ -209,7 +225,8 @@ class InfluxdbClient:
             try:
                 self.validate_record(measurement, fields)
             except Exception as e:
-                errors.append((Symbol.WARN_YELLOW, "Validation error in {0}: {1}".format(measurement, e)))
+                errors.append(
+                    (Symbol.WARN_YELLOW, "Validation error in {0}: {1}".format(measurement, e)))
             finally:
                 progress_bar.update(len(fields)-1)  # 'time' column ignored
 
@@ -218,7 +235,8 @@ class InfluxdbClient:
         except:
             raise Exception("Not connected to a InfluxDB server")
         else:
-            print("  {0} Connection to database \"{1}\" OK".format(Symbol.OK_GREEN, self.settings.influxdb['database']))
+            print("  {0} Connection to database \"{1}\" OK".format(
+                Symbol.OK_GREEN, self.settings.influxdb['database']))
 
         if self.settings.influxdb['group_fields']:
             """
@@ -258,9 +276,11 @@ class InfluxdbClient:
                         try:
                             content = read_xml_file(_field.xml_filename)
                         except Exception as e:
-                            errors.append((Symbol.WARN_YELLOW, "Could not read file for {0}: {1}".format(field, e)))
+                            errors.append(
+                                (Symbol.WARN_YELLOW, "Could not read file for {0}: {1}".format(field, e)))
                         else:
-                            [values[key].append(value) for key, value in list(content.items())]
+                            [values[key].append(value)
+                             for key, value in list(content.items())]
 
                             # keep track of influxdb storage info to allow 'fetch'
                             _field.influxdb_measurement = measurement
@@ -271,9 +291,11 @@ class InfluxdbClient:
                     progress_bar.update()
 
                 # join data with time as first column
-                values_with_time.extend([[k]+v for k, v in list(values.items())])
+                values_with_time.extend(
+                    [[k]+v for k, v in list(values.items())])
 
-                _upload_and_validate(measurement, tags, field_names, values_with_time)
+                _upload_and_validate(
+                    measurement, tags, field_names, values_with_time)
 
         else:  # non grouping
             """
@@ -308,13 +330,16 @@ class InfluxdbClient:
                 _field.influxdb_field = 'value'
 
                 content = read_xml_file(_field.xml_filename)
-                [values[key].append(value) for key, value in list(content.items())]
+                [values[key].append(value)
+                 for key, value in list(content.items())]
                 _field.xml_imported = True
                 progress_bar.update()
 
                 # join data with time as first column
-                values_with_time.extend([[k]+v for k, v in list(values.items())])
-                _upload_and_validate(measurement, tags, field_names, values_with_time)
+                values_with_time.extend(
+                    [[k]+v for k, v in list(values.items())])
+                _upload_and_validate(
+                    measurement, tags, field_names, values_with_time)
 
         for error in errors:
             print("  {} {}".format(error[0], error[1]))
@@ -335,13 +360,16 @@ class InfluxdbClient:
             if self.settings.influxdb['group_fields']:
                 grouped_files[series_name].append((parts[-2], fullname))
             else:
-                grouped_files[".".join([series_name, parts[-2]])].append(('value', fullname))
+                grouped_files[".".join(
+                    [series_name, parts[-2]])].append(('value', fullname))
 
         if self.settings.interactive:
-            show = input("Would you like to see the prospective series and columns? y/[n]: ") or "n"
+            show = input(
+                "Would you like to see the prospective series and columns? y/[n]: ") or "n"
             if show in ("y", "Y"):
                 for series_name in sorted(grouped_files):
-                    print("  - {2}{0}{3}: {1}".format(series_name, [name for name, _ in grouped_files[series_name]], Color.GREEN, Color.CLEAR))
+                    print("  - {2}{0}{3}: {1}".format(series_name, [
+                          name for name, _ in grouped_files[series_name]], Color.GREEN, Color.CLEAR))
 
         print("Importing {0} XML files".format(len(file_list)))
         for series_name in grouped_files:
@@ -354,7 +382,8 @@ class InfluxdbClient:
                 keys_name.append(field)
 
                 content = read_xml_file(file)
-                [values[key].append(value) for key, value in list(content.items())]
+                [values[key].append(value)
+                 for key, value in list(content.items())]
 
             # join data with time as first column
             data.extend([[k]+v for k, v in list(values.items())])
@@ -369,7 +398,8 @@ class InfluxdbClient:
             try:
                 self.validate_record(series_name, keys_name)
             except Exception as e:
-                errors.append("Validation error in {0}: {1}".format(series_name, e))
+                errors.append(
+                    "Validation error in {0}: {1}".format(series_name, e))
 
         if errors:
             print("The following errors were detected while importing:")
